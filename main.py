@@ -4,7 +4,7 @@ import numpy as np
 
 def draw_object_bounding_box(image_to_process, index, box):
     """
-    Рисование объекта с подписями
+    Рисование границ объекта с подписями
     :param image_to_process: исходное изображение
     :param index: индекс определённого с помощью YOLO класса объекта
     :param box: координаты области вокруг объекта
@@ -27,6 +27,29 @@ def draw_object_bounding_box(image_to_process, index, box):
     return final_image
 
 
+def draw_object_count(image_to_process, objects_count):
+    """
+    Подпись количества найденных объектов на изображении
+    :param image_to_process: исходное изображение
+    :param objects_count: количество объектов искомого класса
+    :return: изображение с подписаным количеством найденных объектов
+    """
+
+    start = (45, 150)
+    font_size = 1.5
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    width = 3
+    text = "Objects found: " + str(objects_count)
+
+    # вывод текста с обводкой (чтобы было видно при разном освещении картинки)
+    white_color = (255, 255, 255)
+    black_outline_color = (0, 0, 0)
+    final_image = cv2.putText(image_to_process, text, start, font, font_size, black_outline_color, width * 3, cv2.LINE_AA)
+    final_image = cv2.putText(final_image, text, start, font, font_size, white_color, width, cv2.LINE_AA)
+
+    return final_image
+
+
 def apply_yolo_object_detection(image_to_process):
     """
     Распознавание и определение координат объектов на изображении
@@ -38,9 +61,7 @@ def apply_yolo_object_detection(image_to_process):
     net.setInput(blob)
     outs = net.forward(out_layers)
 
-    class_indexes = []
-    class_scores = []
-    boxes = []
+    class_indexes, class_scores, boxes = ([] for i in range(3))
     objects_count = 0
 
     # запуск поиска объектов на изображении
@@ -55,10 +76,7 @@ def apply_yolo_object_detection(image_to_process):
                 obj_width = int(obj[2] * width)
                 obj_height = int(obj[3] * height)
 
-                x = center_x - obj_width // 2
-                y = center_y - obj_height // 2
-
-                box = [x, y, obj_width, obj_height]
+                box = [center_x - obj_width // 2, center_y - obj_height // 2, obj_width, obj_height]
                 boxes.append(box)
                 class_indexes.append(class_index)
                 class_scores.append(float(class_score))
@@ -76,18 +94,7 @@ def apply_yolo_object_detection(image_to_process):
             objects_count += 1
             image_to_process = draw_object_bounding_box(image_to_process, class_index, box)
 
-    # вывод количества найденных объектов
-    start = (45, 150)
-    font_size = 1.5
-    font = cv2.FONT_HERSHEY_SIMPLEX
-    width = 3
-    text = "Objects found: " + str(objects_count)
-
-    # вывод текста с обводкой (чтобы было видно при разном освещении картинки)
-    white_color = (255, 255, 255)
-    black_outline_color = (0, 0, 0)
-    final_image = cv2.putText(image_to_process, text, start, font, font_size, black_outline_color, width * 3, cv2.LINE_AA)
-    final_image = cv2.putText(final_image, text, start, font, font_size, white_color, width, cv2.LINE_AA)
+    final_image = draw_object_count(image_to_process, objects_count)
 
     return final_image
 
